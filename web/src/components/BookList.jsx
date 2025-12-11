@@ -40,7 +40,7 @@ const BookList = () => {
         setSearch(term);
     };
 
-    if (loading) return <div>Loading books...</div>;
+    if (loading) return <div>جارِ تحميل الكتب...</div>;
     if (error) return <div>{error}</div>;
 
     return (
@@ -62,7 +62,7 @@ const BookList = () => {
                     {/* Books Grid */}
                     {books.length === 0 ? (
                         <div className="text-center py-20 bg-white rounded-2xl shadow-sm border border-slate-100">
-                            <p className="text-slate-500 text-lg">No books available matching your criteria.</p>
+                            <p className="text-slate-500 text-lg">لا توجد كتب تطابق بحثك.</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -81,7 +81,7 @@ const BookList = () => {
                                                     <span className="text-4xl px-4 text-center">📚</span>
                                                 </div>
                                             )}
-                                            <div className="absolute top-0 right-0 p-2">
+                                            <div className="absolute top-0 left-0 p-2 rtl:right-auto rtl:left-0 ltr:right-0">
                                                 <span className="bg-white/90 backdrop-blur-sm text-yellow-500 text-xs font-bold px-2 py-1 rounded-lg shadow-sm flex items-center gap-1">
                                                     <span>★</span> {book.AverageRating ? book.AverageRating.toFixed(1) : '0.0'}
                                                 </span>
@@ -95,8 +95,8 @@ const BookList = () => {
                                             <p className="text-sm text-slate-600 line-clamp-3 mb-4 flex-1">{book.Description}</p>
 
                                             <div className="pt-4 border-t border-slate-50 flex justify-between items-center text-xs text-slate-400">
-                                                <span>{book.ReviewCount} Reviews</span>
-                                                <span className="group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1 text-primary font-bold">Details &rarr;</span>
+                                                <span>{book.ReviewCount} تقييم</span>
+                                                <span className="group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1 text-primary font-bold">تفاصيل &larr;</span>
                                             </div>
                                         </div>
                                     </div>

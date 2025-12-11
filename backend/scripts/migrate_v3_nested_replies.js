@@ -1,7 +1,8 @@
-const { connectDB, sql } = require('../config/db');
+const path = require('path');
 const dotenv = require('dotenv');
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
-dotenv.config();
+const { connectDB, sql } = require('../config/db');
 
 const migrate = async () => {
     try {

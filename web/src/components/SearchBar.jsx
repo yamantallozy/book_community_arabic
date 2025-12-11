@@ -14,14 +14,14 @@ const SearchBar = ({ onSearch }) => {
                 type="text"
                 value={term}
                 onChange={(e) => setTerm(e.target.value)}
-                placeholder="Search by title or author..."
+                placeholder="ابحث باسم الكتاب أو المؤلف..."
                 className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-slate-700 placeholder-slate-400 shadow-sm"
             />
             <button
                 type="submit"
                 className="bg-primary hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-medium shadow-md hover:shadow-lg transition-all"
             >
-                Search
+                بحث
             </button>
         </form>
     );

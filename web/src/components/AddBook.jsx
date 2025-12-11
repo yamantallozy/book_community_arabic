@@ -58,20 +58,20 @@ const AddBook = () => {
     };
 
     if (!user || !user.isAdmin) {
-        return <div className="text-center py-20">Loading or Unauthorized...</div>;
+        return <div className="text-center py-20">جارِ التحميل أو غير مصرح...</div>;
     }
 
     return (
         <div className="max-w-2xl mx-auto py-12 px-4">
             <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
-                <h2 className="text-2xl font-bold text-slate-800 mb-6">Add New Book</h2>
+                <h2 className="text-2xl font-bold text-slate-800 mb-6">إضافة كتاب جديد</h2>
 
                 {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm font-medium">{error}</div>}
 
                 <form onSubmit={handleSubmit} className="flex flex-col gap-5">
 
                     <div className="flex flex-col gap-2">
-                        <label className="text-sm font-medium text-slate-600">Title</label>
+                        <label className="text-sm font-medium text-slate-600">العنوان</label>
                         <input
                             type="text"
                             name="title"
@@ -79,12 +79,12 @@ const AddBook = () => {
                             onChange={onChange}
                             required
                             className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all w-full"
-                            placeholder="Enter book title"
+                            placeholder="أدخل عنوان الكتاب"
                         />
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <label className="text-sm font-medium text-slate-600">Author</label>
+                        <label className="text-sm font-medium text-slate-600">المؤلف</label>
                         <input
                             type="text"
                             name="author"
@@ -92,12 +92,12 @@ const AddBook = () => {
                             onChange={onChange}
                             required
                             className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all w-full"
-                            placeholder="Enter author name"
+                            placeholder="أدخل اسم المؤلف"
                         />
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <label className="text-sm font-medium text-slate-600">Cover Image URL</label>
+                        <label className="text-sm font-medium text-slate-600">رابط صورة الغلاف</label>
                         <input
                             type="url"
                             name="coverImageURL"
@@ -109,14 +109,14 @@ const AddBook = () => {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <label className="text-sm font-medium text-slate-600">Description</label>
+                        <label className="text-sm font-medium text-slate-600">الوصف</label>
                         <textarea
                             name="description"
                             value={description}
                             onChange={onChange}
                             rows="4"
                             className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all w-full resize-none"
-                            placeholder="Enter book description"
+                            placeholder="أدخل وصف الكتاب"
                         ></textarea>
                     </div>
 
@@ -125,7 +125,7 @@ const AddBook = () => {
                         disabled={loading}
                         className="bg-primary hover:bg-indigo-700 text-white py-3 rounded-xl font-bold text-lg shadow-md hover:shadow-lg transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {loading ? 'Adding...' : 'Add Book'}
+                        {loading ? 'جارِ الإضافة...' : 'إضافة كتاب'}
                     </button>
 
                 </form>

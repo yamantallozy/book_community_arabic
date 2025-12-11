@@ -13,7 +13,7 @@ const getBooks = async (req, res) => {
                    COALESCE(AVG(CAST(r.Rating AS FLOAT)), 0) AS AverageRating, 
                    COUNT(r.ReviewID) AS ReviewCount 
             FROM Books b 
-            LEFT JOIN Reviews r ON b.BookID = r.BookID
+            LEFT JOIN Reviews r ON b.BookID = r.BookID AND r.IsDeleted = 0
         `;
 
         const request = pool.request();
