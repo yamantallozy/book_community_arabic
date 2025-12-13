@@ -61,7 +61,15 @@ const getBookById = async (req, res) => {
         const pool = await sql.connect();
         const result = await pool.request()
             .input('id', sql.Int, id)
-            .query('SELECT * FROM Books WHERE BookID = @id');
+            .query(`
+                SELECT b.*, 
+                       COALESCE(AVG(CAST(r.Rating AS FLOAT)), 0) AS AverageRating, 
+                       COUNT(r.ReviewID) AS ReviewCount 
+                FROM Books b 
+                LEFT JOIN Reviews r ON b.BookID = r.BookID AND r.IsDeleted = 0
+                WHERE b.BookID = @id
+                GROUP BY b.BookID, b.Title, b.Author, b.Description, b.CoverImageURL, b.CreatedAt
+            `);
 
         if (result.recordset.length === 0) {
             return res.status(404).json({ msg: 'Book not found' });
@@ -71,6 +79,27 @@ const getBookById = async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).send('Server Error');
+    }
+};
+
+const getBookDebug = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const pool = await sql.connect();
+        const result = await pool.request()
+            .input('id', sql.Int, id)
+            .query(`
+                SELECT b.BookID, 
+                       COALESCE(AVG(CAST(r.Rating AS FLOAT)), 0) AS DebugAvg, 
+                       COUNT(r.ReviewID) AS DebugCount 
+                FROM Books b 
+                LEFT JOIN Reviews r ON b.BookID = r.BookID AND r.IsDeleted = 0
+                WHERE b.BookID = @id
+                GROUP BY b.BookID
+            `);
+        res.json(result.recordset[0]);
+    } catch (err) {
+        res.status(500).json(err);
     }
 };
 
@@ -141,4 +170,4 @@ const deleteBook = async (req, res) => {
     }
 };
 
-module.exports = { getBooks, getBookById, createBook, deleteBook };
+module.exports = { getBooks, getBookById, createBook, deleteBook, getBookDebug };

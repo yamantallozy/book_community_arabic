@@ -1,53 +1,104 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import AuthContext from '../context/AuthContext';
+import ShelfControl from './ShelfControl';
 
 const UserProfile = () => {
     const { id } = useParams();
     const { user } = useContext(AuthContext);
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [stats, setStats] = useState({ followers: 0, following: 0 });
+    const [isFollowing, setIsFollowing] = useState(false);
+    const [shelves, setShelves] = useState([]);
+    const [recentReviews, setRecentReviews] = useState([]);
 
     // Editing state
     const [isEditing, setIsEditing] = useState(false);
-    const [bio, setBio] = useState('');
+    const [editForm, setEditForm] = useState({
+        bio: '',
+        location: '',
+        favoriteGenres: [],
+        socialLinks: {}
+    });
     const [avatarFile, setAvatarFile] = useState(null);
 
+    // Initial Data Fetch
     useEffect(() => {
-        const fetchProfile = async () => {
+        const fetchAllData = async () => {
             try {
-                const res = await axios.get(`http://localhost:5000/api/users/${id}`);
-                setProfile(res.data);
-                setBio(res.data.bio || '');
+                // 1. Profile Data
+                const profileRes = await axios.get(`http://localhost:5000/api/users/${id}`);
+                setProfile(profileRes.data);
+                setStats(profileRes.data.stats || { followers: 0, following: 0 });
+                setIsFollowing(profileRes.data.isFollowing);
+
+                setEditForm({
+                    bio: profileRes.data.bio || '',
+                    location: profileRes.data.location || '',
+                    favoriteGenres: profileRes.data.favoriteGenres || [],
+                    socialLinks: profileRes.data.socialLinks || {}
+                });
+
+                // 2. Shelves Data
+                const shelvesRes = await axios.get(`http://localhost:5000/api/shelves/user/${id}`);
+                setShelves(shelvesRes.data);
+
+                // 3. Recent Reviews
+                const reviewsRes = await axios.get(`http://localhost:5000/api/reviews/user/${id}`);
+                setRecentReviews(reviewsRes.data);
+
                 setLoading(false);
             } catch (err) {
                 console.error(err);
                 setLoading(false);
             }
         };
-        fetchProfile();
+        fetchAllData();
     }, [id]);
 
-    const handleSave = async () => {
+    const handleFollowToggle = async () => {
+        if (!user) return alert('يرجى تسجيل الدخول للمتابعة');
+        try {
+            if (isFollowing) {
+                await axios.delete(`http://localhost:5000/api/users/${id}/follow`, {
+                    headers: { Authorization: `Bearer ${user.token}` }
+                });
+                setStats(prev => ({ ...prev, followers: prev.followers - 1 }));
+            } else {
+                await axios.post(`http://localhost:5000/api/users/${id}/follow`, {}, {
+                    headers: { Authorization: `Bearer ${user.token}` }
+                });
+                setStats(prev => ({ ...prev, followers: prev.followers + 1 }));
+            }
+            setIsFollowing(!isFollowing);
+        } catch (err) {
+            console.error(err);
+            alert('حدث خطأ في المتابعة');
+        }
+    };
+
+    const handleSaveProfile = async () => {
         try {
             const formData = new FormData();
-            formData.append('bio', bio);
+            formData.append('bio', editForm.bio);
+            formData.append('location', editForm.location);
+            formData.append('favoriteGenres', JSON.stringify(editForm.favoriteGenres));
+            formData.append('socialLinks', JSON.stringify(editForm.socialLinks));
             if (avatarFile) {
                 formData.append('avatar', avatarFile);
             }
 
-            await axios.put('http://localhost:5000/api/users/profile', formData, {
+            const res = await axios.put('http://localhost:5000/api/users/profile', formData, {
                 headers: {
                     Authorization: `Bearer ${user.token}`,
                     'Content-Type': 'multipart/form-data'
                 }
             });
 
+            setProfile(prev => ({ ...prev, ...editForm, avatar: res.data.avatar }));
             setIsEditing(false);
-            // Refresh to show new avatar immediately
-            const res = await axios.get(`http://localhost:5000/api/users/${id}`);
-            setProfile(res.data);
             alert('تم تحديث الملف الشخصي!');
         } catch (err) {
             console.error(err);
@@ -55,95 +106,230 @@ const UserProfile = () => {
         }
     };
 
-    if (loading) return <div style={{ padding: '20px' }}>جارِ تحميل الملف الشخصي...</div>;
-    if (!profile) return <div style={{ padding: '20px' }}>المستخدم غير موجود</div>;
+    if (loading) return <div className="p-10 text-center">جارِ تحميل الملف الشخصي...</div>;
+    if (!profile) return <div className="p-10 text-center">المستخدم غير موجود</div>;
 
     const isOwnProfile = user && Number(user.id) === Number(profile.id);
 
+    // Filter Shelves
+    const currentlyReading = shelves.filter(s => s.Status === 'CurrentlyReading');
+    const read = shelves.filter(s => s.Status === 'Read');
+    const wantToRead = shelves.filter(s => s.Status === 'WantToRead');
+
     return (
-        <div className="max-w-3xl mx-auto py-10 px-4">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                {/* Header / Avatar Section */}
-                <div className="bg-gradient-to-br from-indigo-500 to-purple-600 h-32 relative"></div>
-                <div className="px-8 pb-8 text-center relative">
-                    <div className="relative -mt-16 inline-block">
+        <div className="max-w-6xl mx-auto py-8 px-4 grid grid-cols-1 md:grid-cols-12 gap-8">
+            {/* Left Column (Info) */}
+            <div className="md:col-span-4 lg:col-span-3 space-y-6">
+                <div className="text-center md:text-right">
+                    <div className="relative inline-block mb-4">
                         <img
                             src={profile.avatar || 'https://via.placeholder.com/150'}
                             alt="Avatar"
-                            className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-md bg-white"
+                            className="w-40 h-40 rounded-full object-cover border-4 border-white shadow-lg mx-auto md:mx-0"
                         />
                         {isEditing && (
-                            <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-white text-slate-700 p-2 rounded-full shadow-md cursor-pointer hover:bg-slate-50 border border-slate-200 transition-all">
+                            <label htmlFor="avatar-upload" className="absolute bottom-2 right-2 bg-white p-2 rounded-full shadow cursor-pointer text-slate-600 hover:text-primary">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.5l-3 9 9-3a2 2 0 0 0 .5-.5Z" /><path d="m15 5 4 4" /></svg>
+                                <input id="avatar-upload" type="file" className="hidden" accept="image/*" onChange={e => setAvatarFile(e.target.files[0])} />
                             </label>
                         )}
                     </div>
 
-                    {isEditing ? (
-                        <div className="mt-6 text-right max-w-lg mx-auto">
-                            <input
-                                id="avatar-upload"
-                                type="file"
-                                accept="image/*"
-                                onChange={e => setAvatarFile(e.target.files[0])}
-                                className="hidden"
-                            />
-
-                            <div className="mb-6">
-                                <label className="block text-sm font-bold text-slate-700 mb-2">اسم المستخدم</label>
-                                <div className="text-xl font-bold text-slate-400 px-4 py-2 bg-slate-50 rounded-xl border border-slate-200">
-                                    {profile.username}
-                                </div>
-                            </div>
-
-                            <div className="mb-6">
-                                <label className="block text-sm font-bold text-slate-700 mb-2">نبذة عني</label>
-                                <textarea
-                                    value={bio}
-                                    onChange={e => setBio(e.target.value)}
-                                    className="w-full h-32 p-4 bg-white border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition-all resize-none shadow-sm"
-                                    placeholder="اكتب شيئاً عن نفسك..."
-                                />
-                            </div>
-
-                            <div className="flex gap-3 justify-end mt-8 border-t border-slate-100 pt-6">
-                                <button onClick={() => setIsEditing(false)} className="px-6 py-2.5 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-all">إلغاء</button>
-                                <button onClick={handleSave} className="px-6 py-2.5 bg-primary text-white font-bold rounded-xl shadow-md hover:bg-indigo-700 hover:shadow-lg hover:-translate-y-0.5 transition-all">حفظ التغييرات</button>
-                            </div>
-                        </div>
-                    ) : (
+                    {!isEditing ? (
                         <>
-                            <h2 className="mt-4 text-3xl font-bold text-slate-800">{profile.username}</h2>
-                            <div className="flex items-center justify-center gap-2 mt-2">
-                                {profile.isAdmin && <span className="bg-rose-100 text-rose-700 px-3 py-1 rounded-full text-xs font-bold border border-rose-200">مسؤول</span>}
-                                <span className="text-slate-500 text-sm bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
-                                    انضم في {new Date(profile.createdAt).toLocaleDateString('ar-EG')}
-                                </span>
-                            </div>
+                            <h1 className="text-2xl font-bold text-slate-900 mb-1">{profile.username}</h1>
+                            {profile.location && <p className="text-slate-500 text-sm mb-4">📍 {profile.location}</p>}
 
-                            <div className="mt-8 mx-auto max-w-lg">
-                                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 text-right">
-                                    <h4 className="text-sm uppercase tracking-wider text-slate-400 font-bold mb-3 border-b border-slate-200 pb-2">نبذة شخصية</h4>
-                                    <p className="text-slate-600 leading-relaxed whitespace-pre-wrap">
-                                        {profile.bio || 'لا توجد نبذة شخصية حتى الآن.'}
-                                    </p>
+                            <div className="flex justify-center md:justify-start gap-6 text-sm text-slate-600 mb-6 font-medium">
+                                <div className="text-center md:text-right">
+                                    <span className="block text-lg font-bold text-slate-900">{stats.followers}</span>
+                                    متابع
+                                </div>
+                                <div className="text-center md:text-right">
+                                    <span className="block text-lg font-bold text-slate-900">{stats.following}</span>
+                                    يتابع
+                                </div>
+                                <div className="text-center md:text-right">
+                                    <span className="block text-lg font-bold text-slate-900">{stats.averageRating ? stats.averageRating : '0'}</span>
+                                    متوسط التقييم
+                                </div>
+                                <div className="text-center md:text-right">
+                                    <span className="block text-lg font-bold text-slate-900">{reviewsCount(recentReviews)}</span>
+                                    مراجعة
                                 </div>
                             </div>
 
-                            {isOwnProfile && (
+                            {!isOwnProfile && (
                                 <button
-                                    onClick={() => setIsEditing(true)}
-                                    className="mt-8 px-8 py-3 bg-white text-primary border-2 border-primary rounded-xl font-bold hover:bg-primary hover:text-white transition-all shadow-sm"
+                                    onClick={handleFollowToggle}
+                                    className={`w-full py-2 px-4 rounded-full font-bold transition-all ${isFollowing ? 'bg-slate-100 text-slate-600 border border-slate-300' : 'bg-primary text-white shadow-md hover:bg-indigo-700'}`}
                                 >
-                                    تعديل الملف الشخصي
+                                    {isFollowing ? 'إلغاء المتابعة' : 'متابعة'}
                                 </button>
                             )}
+
+                            {isOwnProfile && (
+                                <button onClick={() => setIsEditing(true)} className="text-sm text-primary font-bold hover:underline">تعديل الملف الشخصي</button>
+                            )}
+
+                            <div className="border-t border-slate-200 mt-6 pt-6">
+                                <h3 className="text-xs uppercase font-bold text-slate-400 mb-2">أنواع الكتب المفضلة</h3>
+                                <div className="flex flex-wrap gap-2">
+                                    {profile.favoriteGenres?.length > 0 ? (
+                                        profile.favoriteGenres.map((g, i) => (
+                                            <span key={i} className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-md">{g}</span>
+                                        ))
+                                    ) : (
+                                        <span className="text-slate-400 text-xs italic">لم يحدد بعد</span>
+                                    )}
+                                </div>
+                            </div>
                         </>
+                    ) : (
+                        <div className="space-y-3 text-right">
+                            <div>
+                                <label className="text-xs font-bold text-slate-500">الاسم</label>
+                                <div className="text-slate-700 font-bold">{profile.username}</div>
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-500">الموقع</label>
+                                <input
+                                    className="w-full text-sm border p-2 rounded"
+                                    value={editForm.location}
+                                    onChange={e => setEditForm({ ...editForm, location: e.target.value })}
+                                    placeholder="القاهرة، مصر"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-500">نبذة عني</label>
+                                <textarea
+                                    className="w-full text-sm border p-2 rounded h-24"
+                                    value={editForm.bio}
+                                    onChange={e => setEditForm({ ...editForm, bio: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-500">التصنيفات المفضلة (افصل بفاصلة)</label>
+                                <input
+                                    className="w-full text-sm border p-2 rounded"
+                                    value={editForm.favoriteGenres.join(', ')}
+                                    onChange={e => setEditForm({ ...editForm, favoriteGenres: e.target.value.split(',').map(s => s.trim()) })}
+                                    placeholder="روايات، خيال علمي..."
+                                />
+                            </div>
+                            <div className="flex gap-2 mt-4">
+                                <button onClick={handleSaveProfile} className="flex-1 bg-primary text-white text-sm py-2 rounded font-bold">حفظ</button>
+                                <button onClick={() => setIsEditing(false)} className="flex-1 bg-slate-100 text-slate-600 text-sm py-2 rounded font-bold">إلغاء</button>
+                            </div>
+                        </div>
                     )}
                 </div>
+            </div>
+
+            {/* Right Column (Content) */}
+            <div className="md:col-span-8 lg:col-span-9 space-y-8">
+
+                {/* Currently Reading */}
+                {currentlyReading.length > 0 && (
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                        <h2 className="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">يقرأ حالياً</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {currentlyReading.map(shelf => (
+                                <div key={shelf.BookID} className="flex gap-4 items-start">
+                                    <Link to={`/books/${shelf.BookID}`}>
+                                        <img src={shelf.CoverImageURL} alt={shelf.Title} className="w-20 h-28 object-cover rounded shadow-sm hover:opacity-90 transition-opacity" />
+                                    </Link>
+                                    <div>
+                                        <Link to={`/books/${shelf.BookID}`} className="font-bold text-slate-900 hover:text-primary block mb-1">
+                                            {shelf.Title}
+                                        </Link>
+                                        <p className="text-sm text-slate-500 mb-2">بقلم {shelf.Author}</p>
+                                        <div className="text-xs text-slate-400">بدأ القراءة منذ {new Date(shelf.UpdatedAt).toLocaleDateString()}</div>
+                                        {/* Optional: Add progress bar here if DB supported it */}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Read Books Grid (New Request) */}
+                {read.length > 0 && (
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                        <h2 className="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">كتب قرأتها ({read.length})</h2>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                            {read.slice(0, 10).map(shelf => ( // Show top 10
+                                <div key={shelf.BookID} className="group relative">
+                                    <Link to={`/books/${shelf.BookID}`}>
+                                        <img src={shelf.CoverImageURL} alt={shelf.Title} className="w-full h-40 object-cover rounded-lg shadow-sm group-hover:shadow-md transition-all" />
+                                        <div className="mt-2 text-xs font-bold text-slate-800 truncate">{shelf.Title}</div>
+                                    </Link>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Bookshelves Summary */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                    <h2 className="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">أرفف الكتب</h2>
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                        <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                            <div className="text-2xl font-bold text-emerald-600 mb-1">{read.length}</div>
+                            <div className="text-sm font-medium text-emerald-800">قرأته</div>
+                        </div>
+                        <div className="bg-amber-50 p-4 rounded-xl border-amber-100">
+                            <div className="text-2xl font-bold text-amber-600 mb-1">{currentlyReading.length}</div>
+                            <div className="text-sm font-medium text-amber-800">يقرأ حالياً</div>
+                        </div>
+                        <div className="bg-blue-50 p-4 rounded-xl border-blue-100">
+                            <div className="text-2xl font-bold text-blue-600 mb-1">{wantToRead.length}</div>
+                            <div className="text-sm font-medium text-blue-800">أنوي قراءته</div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Recent Activity */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                    <h2 className="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">أحدث الأنشطة</h2>
+                    {recentReviews.length > 0 ? (
+                        <div className="space-y-6">
+                            {recentReviews.map(review => (
+                                <div key={review.ReviewID} className="flex gap-4">
+                                    <Link to={`/books/${review.BookID}`} className="shrink-0">
+                                        <img src={review.CoverImageURL} alt={review.BookTitle} className="w-12 h-16 object-cover rounded shadow-sm" />
+                                    </Link>
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-sm font-bold text-slate-700">قام بتقييم كتاب</span>
+                                            <Link to={`/books/${review.BookID}`} className="text-sm font-bold text-primary hover:underline">{review.BookTitle}</Link>
+                                        </div>
+                                        <div className="flex items-center gap-1 mb-2">
+                                            {[...Array(5)].map((_, i) => (
+                                                <svg key={i} className={`w-4 h-4 ${i < review.Rating ? 'text-amber-400' : 'text-slate-200'}`} fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                </svg>
+                                            ))}
+                                            <span className="text-xs text-slate-400 mr-2">{new Date(review.CreatedAt).toLocaleDateString('ar-EG')}</span>
+                                        </div>
+                                        {review.Comment && (
+                                            <p className="text-slate-600 text-sm italic">"{review.Comment}"</p>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-slate-500 italic">لا توجد أنشطة مؤخراً.</p>
+                    )}
+                </div>
+
             </div>
         </div>
     );
 };
+
+// Helper for count
+const reviewsCount = (reviews) => reviews ? reviews.length : 0;
 
 export default UserProfile;

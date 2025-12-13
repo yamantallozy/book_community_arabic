@@ -7,14 +7,19 @@ const {
     deleteReview,
     addReply,
     updateReply,
-    deleteReply
+    deleteReply,
+    getReviewsByUser,
+    toggleReviewLike
 } = require('../controllers/reviewController');
 const { protect } = require('../middleware/authMiddleware');
 
 router.get('/:bookId', getReviews);
+router.get('/user/:userId', getReviewsByUser);
 router.post('/', protect, addReview);
 router.put('/:reviewId', protect, updateReview);
 router.delete('/:reviewId', protect, deleteReview);
+
+router.post('/:reviewId/like', protect, toggleReviewLike);
 
 router.post('/:reviewId/reply', protect, addReply);
 router.put('/reply/:replyId', protect, updateReply);

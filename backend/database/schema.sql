@@ -3,6 +3,9 @@ CREATE TABLE Users (
     Username NVARCHAR(50) NOT NULL UNIQUE,
     Email NVARCHAR(100) NOT NULL UNIQUE,
     PasswordHash NVARCHAR(255) NOT NULL,
+    Location NVARCHAR(100),
+    FavoriteGenres NVARCHAR(MAX),
+    SocialLinks NVARCHAR(MAX),
     CreatedAt DATETIME DEFAULT GETDATE()
 );
 
@@ -40,4 +43,13 @@ CREATE TABLE Events (
     EventDate DATETIME NOT NULL,
     ZoomLink NVARCHAR(500),
     CreatedAt DATETIME DEFAULT GETDATE()
+);
+
+CREATE TABLE Follows (
+    FollowID INT PRIMARY KEY IDENTITY(1,1),
+    FollowerID INT FOREIGN KEY REFERENCES Users(UserID),
+    FollowingID INT FOREIGN KEY REFERENCES Users(UserID),
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    UNIQUE (FollowerID, FollowingID),
+    CHECK (FollowerID <> FollowingID)
 );

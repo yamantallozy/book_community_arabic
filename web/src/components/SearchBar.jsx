@@ -9,20 +9,24 @@ const SearchBar = ({ onSearch }) => {
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex gap-4 w-full md:w-2/3">
-            <input
-                type="text"
-                value={term}
-                onChange={(e) => setTerm(e.target.value)}
-                placeholder="ابحث باسم الكتاب أو المؤلف..."
-                className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-slate-700 placeholder-slate-400 shadow-sm"
-            />
-            <button
-                type="submit"
-                className="bg-primary hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-medium shadow-md hover:shadow-lg transition-all"
-            >
-                بحث
-            </button>
+        <form onSubmit={handleSubmit} className="w-full">
+            <div className="relative">
+                <input
+                    type="text"
+                    value={term}
+                    onChange={(e) => setTerm(e.target.value)}
+                    placeholder="ابحث باسم الكتاب أو المؤلف..."
+                    className="w-full bg-white border border-slate-200 rounded-xl pr-12 pl-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-slate-700 placeholder-slate-400 shadow-sm"
+                />
+                <button
+                    type="submit"
+                    className="absolute top-1/2 right-4 -translate-y-1/2 text-slate-400 hover:text-primary transition-colors"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </button>
+            </div>
         </form>
     );
 };
