@@ -1,8 +1,8 @@
 import React from 'react';
 
-const FilterBar = ({ sort, setSort, rating, setRating }) => {
+const FilterBar = ({ sort, setSort, rating, setRating, className = "" }) => {
     return (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-6 w-full">
+        <div className={`bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-6 w-full ${className}`}>
             <h3 className="font-bold text-slate-800 text-lg">تصفية</h3>
 
             <div className="flex flex-col gap-2">

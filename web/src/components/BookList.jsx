@@ -13,6 +13,7 @@ const BookList = () => {
     const [search, setSearch] = useState('');
     const [sort, setSort] = useState('newest');
     const [rating, setRating] = useState('');
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
 
     useEffect(() => {
         const fetchBooks = async () => {
@@ -45,10 +46,61 @@ const BookList = () => {
 
     return (
         <div className="max-w-7xl mx-auto py-10 px-4">
+            {/* Mobile Filter Button */}
+            <div className="md:hidden mb-4 flex justify-end">
+                <button
+                    onClick={() => setIsFilterOpen(true)}
+                    className="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg shadow-sm hover:bg-slate-50 transition-colors"
+                >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                    <span>تصفية</span>
+                </button>
+            </div>
+
+            {/* Mobile Filter Drawer (Overlay) */}
+            {isFilterOpen && (
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-0 md:hidden">
+                    {/* Backdrop */}
+                    <div
+                        className="fixed inset-0 bg-black/50 transition-opacity backdrop-blur-sm"
+                        onClick={() => setIsFilterOpen(false)}
+                    ></div>
+
+                    {/* Drawer Content */}
+                    <div className="relative bg-white w-full max-w-sm rounded-t-2xl sm:rounded-2xl shadow-xl overflow-hidden animate-fade-in-down">
+                        <div className="flex justify-between items-center p-4 border-b border-slate-100 bg-slate-50">
+                            <h3 className="font-bold text-lg text-slate-800">خيارات التصفية</h3>
+                            <button onClick={() => setIsFilterOpen(false)} className="text-slate-400 hover:text-slate-600">
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div className="p-4">
+                            <FilterBar
+                                sort={sort}
+                                setSort={setSort}
+                                rating={rating}
+                                setRating={setRating}
+                                className="!p-0 !shadow-none !border-none" // Remove default card styles inside modal
+                            />
+                            <button
+                                onClick={() => setIsFilterOpen(false)}
+                                className="w-full mt-6 bg-primary text-white font-bold py-3 rounded-xl shadow-lg shadow-indigo-200 active:scale-95 transition-all"
+                            >
+                                إظهار النتائج
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="flex flex-col md:flex-row gap-8 items-start">
 
-                {/* Sidebar */}
-                <aside className="w-full md:w-64 flex-shrink-0 sticky top-24">
+                {/* Desktop Sidebar (Hidden on Mobile) */}
+                <aside className="hidden md:block w-64 flex-shrink-0 sticky top-24">
                     <FilterBar sort={sort} setSort={setSort} rating={rating} setRating={setRating} />
                 </aside>
 
