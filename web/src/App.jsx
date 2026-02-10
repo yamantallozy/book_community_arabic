@@ -12,10 +12,12 @@ import Register from './components/Register';
 import Footer from './components/Footer';
 import Events from './components/Events';
 import Blog from './components/Blog';
+import AuthModal from './components/AuthModal';
 
 function App() {
   return (
     <AuthProvider>
+      <AuthModal />
       <Router>
         <div className="flex flex-col min-h-screen bg-slate-50">
           <Navbar />

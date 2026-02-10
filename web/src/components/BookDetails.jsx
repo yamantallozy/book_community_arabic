@@ -193,7 +193,7 @@ const ReviewReplyForm = ({ reviewId, userId, userToken, onReplyAdded, parentRepl
 
 const BookDetails = () => {
     const { id } = useParams();
-    const { user } = useContext(AuthContext);
+    const { user, setShowAuthModal } = useContext(AuthContext); // Added setShowAuthModal
     const [book, setBook] = useState(null);
     const [reviews, setReviews] = useState([]);
     const [highlights, setHighlights] = useState([]);
@@ -205,6 +205,7 @@ const BookDetails = () => {
     const [hoverRating, setHoverRating] = useState(0);
     const [shelfRefreshTrigger, setShelfRefreshTrigger] = useState(0);
     const [sortBy, setSortBy] = useState('newest'); // 'newest' | 'popular'
+    const [highlightSortBy, setHighlightSortBy] = useState('newest'); // 'newest' | 'popular'
 
     const [comment, setComment] = useState('');
     const [submitError, setSubmitError] = useState('');
@@ -214,6 +215,21 @@ const BookDetails = () => {
     const [editingReview, setEditingReview] = useState(null);
     const [editComment, setEditComment] = useState('');
     const [editRating, setEditRating] = useState(5);
+
+    // Pending action state for deferred login
+    const [pendingAction, setPendingAction] = useState(null);
+
+    // Effect to retry pending action after login
+    useEffect(() => {
+        if (user && pendingAction) {
+            if (pendingAction.type === 'rate') {
+                handleRate(pendingAction.data);
+            } else if (pendingAction.type === 'highlight') {
+                handleAddHighlight();
+            }
+            setPendingAction(null);
+        }
+    }, [user, pendingAction]);
 
     const getAuthHeaders = () => {
         if (user && user.token) {
@@ -284,6 +300,18 @@ const BookDetails = () => {
         return sorted;
     };
 
+    // Derived state for sorted highlights
+    const getSortedHighlights = () => {
+        let sorted = [...highlights];
+        if (highlightSortBy === 'popular') {
+            sorted.sort((a, b) => (b.LikeCount || 0) - (a.LikeCount || 0));
+        } else {
+            // Newest
+            sorted.sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt));
+        }
+        return sorted;
+    };
+
     const fetchHighlights = async () => {
         try {
             const res = await axios.get(`http://localhost:5000/api/highlights?bookId=${id}`, getAuthHeaders());
@@ -319,7 +347,11 @@ const BookDetails = () => {
     }, [id]);
 
     const handleRate = async (newRating) => {
-        if (!user) return alert('الرجاء تسجيل الدخول للتقييم');
+        if (!user) {
+            setPendingAction({ type: 'rate', data: newRating });
+            setShowAuthModal(true);
+            return;
+        }
 
         // Use the comment from state if provided, otherwise keep existing
         const finalComment = comment.trim() !== '' ? comment : (userReview ? userReview.Comment : '');
@@ -410,8 +442,13 @@ const BookDetails = () => {
     };
 
     const handleAddHighlight = async (e) => {
-        e.preventDefault();
-        if (!user) return;
+        if (e) e.preventDefault();
+
+        if (!user) {
+            setPendingAction({ type: 'highlight' });
+            setShowAuthModal(true);
+            return;
+        }
 
         try {
             const formData = new FormData();
@@ -466,7 +503,10 @@ const BookDetails = () => {
     };
 
     const handleToggleLike = async (itemId, type) => {
-        if (!user) return alert('الرجاء تسجيل الدخول للإعجاب');
+        if (!user) {
+            setShowAuthModal(true);
+            return;
+        }
         const endpoint = type === 'review' ? `reviews/${itemId}/like` : `highlights/${itemId}/like`;
 
         // Optimistic Update
@@ -733,8 +773,8 @@ const BookDetails = () => {
                                     </button>
                                 </div>
                             </div>
-                            {/* Write Review Section */}
-                            {user && (!userReview || !userReview.Comment || userReview.Comment.trim() === '') && (
+                            {/* Write Review Section - Always visible now */}
+                            {(!user || (!userReview || !userReview.Comment || userReview.Comment.trim() === '')) && (
                                 <div className="bg-slate-50 p-6 rounded-2xl mb-8 border border-slate-200 shadow-sm animate-fade-in">
                                     <div className="flex flex-col gap-4">
                                         <div className="flex justify-between items-center">
@@ -897,88 +937,106 @@ const BookDetails = () => {
                     {/* Highlights Content */}
                     {activeTab === 'highlights' && (
                         <div className="space-y-8">
-                            {user ? (
-                                <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 p-1 rounded-2xl shadow-lg mb-10">
-                                    <div className="bg-white rounded-xl p-6">
-                                        <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-                                            <span className="text-2xl">✨</span> شارك مقتطفاً مميزاً
-                                        </h3>
-                                        <form onSubmit={handleAddHighlight} className="relative">
-                                            <div className="relative bg-slate-50 rounded-xl focus-within:ring-2 focus-within:ring-purple-500 transition-all overflow-hidden border border-slate-200">
-                                                <textarea
-                                                    value={hlText}
-                                                    onChange={e => setHlText(e.target.value)}
-                                                    className="w-full p-4 pb-14 border-none resize-none focus:ring-0 text-lg text-slate-700 min-h-[120px] bg-transparent"
-                                                    placeholder="اكتب الاقتباس هنا..."
-                                                />
 
-                                                {hlImage && (
-                                                    <div className="absolute bottom-16 right-4 z-10">
-                                                        <div className="relative group">
-                                                            <img
-                                                                src={URL.createObjectURL(hlImage)}
-                                                                alt="Preview"
-                                                                className="h-16 w-16 object-cover rounded-lg border border-slate-200 shadow-sm"
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setHlImage(null)}
-                                                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition shadow-md"
-                                                            >
-                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                                                </svg>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                )}
+                            <div className="flex justify-end mb-6">
+                                <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-lg border border-slate-200">
+                                    <button
+                                        onClick={() => setHighlightSortBy('newest')}
+                                        className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${highlightSortBy === 'newest' ? 'bg-white shadow-sm text-primary' : 'text-slate-500 hover:text-slate-700'}`}
+                                    >
+                                        الأحدث
+                                    </button>
+                                    <button
+                                        onClick={() => setHighlightSortBy('popular')}
+                                        className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${highlightSortBy === 'popular' ? 'bg-white shadow-sm text-primary' : 'text-slate-500 hover:text-slate-700'}`}
+                                    >
+                                        الأكثر إعجاباً
+                                    </button>
+                                </div>
+                            </div>
 
-                                                <div className="absolute bottom-2 left-2 flex items-center gap-2 bg-white/80 p-1.5 rounded-xl backdrop-blur-sm shadow-sm border border-slate-100">
-                                                    <input
-                                                        type="file"
-                                                        id="file-upload"
-                                                        className="hidden"
-                                                        accept="image/*"
-                                                        onChange={(e) => setHlImage(e.target.files[0])}
+                            {/* Always show form, prompt login on submit */}
+                            <div className="bg-slate-50 p-6 rounded-2xl mb-8 border border-slate-200 shadow-sm animate-fade-in">
+                                <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2 mb-4">
+                                    <span className="text-xl">✨</span> شارك مقتطفاً مميزاً
+                                </h3>
+                                <form onSubmit={handleAddHighlight} className="relative flex flex-col gap-4">
+                                    <div className="relative">
+                                        <textarea
+                                            value={hlText}
+                                            onChange={e => setHlText(e.target.value)}
+                                            className="w-full bg-white border border-slate-200 rounded-xl p-4 text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none transition-all resize-none min-h-[120px]"
+                                            placeholder="اكتب الاقتباس هنا..."
+                                        />
+
+                                        {hlImage && (
+                                            <div className="absolute bottom-4 left-4 z-10">
+                                                <div className="relative group">
+                                                    <img
+                                                        src={URL.createObjectURL(hlImage)}
+                                                        alt="Preview"
+                                                        className="h-16 w-16 object-cover rounded-lg border border-slate-200 shadow-sm"
                                                     />
-                                                    <label
-                                                        htmlFor="file-upload"
-                                                        className="p-2 text-slate-500 hover:text-primary hover:bg-slate-50 rounded-lg cursor-pointer transition-all"
-                                                        title="أرفق صورة"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                            <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
-                                                        </svg>
-                                                    </label>
                                                     <button
-                                                        type="submit"
-                                                        className={`p-2 rounded-lg transition-all ${hlText.trim() || hlImage ? 'bg-primary text-white shadow-md hover:bg-indigo-700' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
-                                                        disabled={!hlText.trim() && !hlImage}
+                                                        type="button"
+                                                        onClick={() => setHlImage(null)}
+                                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition shadow-md"
                                                     >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={!user?.dir || user.dir === 'rtl' ? 'rotate-180' : ''}>
-                                                            <line x1="22" y1="2" x2="11" y2="13"></line>
-                                                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                                                         </svg>
                                                     </button>
                                                 </div>
                                             </div>
-                                        </form>
+                                        )}
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="bg-slate-50 p-12 rounded-3xl border border-slate-200 mb-10 text-center">
-                                    <span className="text-5xl block mb-6">✨</span>
-                                    <h3 className="text-2xl font-bold text-slate-800 mb-2">شارك مقتطفاً</h3>
-                                    <p className="text-slate-500 mb-8 max-w-md mx-auto">هل لديك اقتباس مفضل من هذا الكتاب؟ شاركه مع المجتمع ليظهر في ملفك الشخصي.</p>
-                                    <a href="/login" className="inline-block bg-white border border-slate-300 text-slate-700 px-8 py-3 rounded-xl font-bold hover:bg-slate-50 transition shadow-sm hover:shadow-md">سجل دخولك للمشاركة</a>
-                                </div>
-                            )}
+
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex items-center">
+                                            <input
+                                                type="file"
+                                                id="file-upload"
+                                                className="hidden"
+                                                accept="image/*"
+                                                onChange={(e) => setHlImage(e.target.files[0])}
+                                            />
+                                            <label
+                                                htmlFor="file-upload"
+                                                className="flex items-center gap-2 p-2 text-slate-500 hover:text-primary hover:bg-slate-100 rounded-lg cursor-pointer transition-all text-sm font-medium"
+                                                title="أرفق صورة"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                                                </svg>
+                                                <span className="hidden sm:inline">صورة</span>
+                                            </label>
+                                        </div>
+
+                                        <button
+                                            type="submit"
+                                            className={`bg-primary text-white px-8 py-2.5 rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg flex items-center gap-2`}
+                                            disabled={!hlText.trim() && !hlImage}
+                                        >
+                                            <span className={!user?.dir || user.dir === 'rtl' ? 'rotate-180' : ''}>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                                </svg>
+                                            </span>
+                                            <span>نشر</span>
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
 
                             {highlights.length === 0 ? (
-                                <p className="text-center text-slate-500 py-10 italic">لا توجد مقتطفات لهذا الكتاب بعد.</p>
+                                <div className="text-center py-16 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                                    <span className="text-4xl block mb-4">✨</span>
+                                    <p className="text-slate-500 font-medium">لا توجد مقتطفات لهذا الكتاب بعد. كن أول من يشارك!</p>
+                                </div>
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {highlights.map(hl => (
+                                    {getSortedHighlights().map(hl => (
                                         <div key={hl.HighlightID} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex gap-4">
                                             <div className="flex-shrink-0">
                                                 <img src={hl.Avatar || 'https://via.placeholder.com/40'} alt={hl.Username} className="w-10 h-10 rounded-full object-cover border border-slate-100" />

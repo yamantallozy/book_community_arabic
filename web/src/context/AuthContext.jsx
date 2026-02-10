@@ -6,6 +6,7 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [showAuthModal, setShowAuthModal] = useState(false);
 
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
@@ -69,7 +70,9 @@ export const AuthProvider = ({ children }) => {
             logout,
             isAdmin,
             isSuperAdmin,
-            isModerator
+            isModerator,
+            showAuthModal,
+            setShowAuthModal
         }}>
             {children}
         </AuthContext.Provider>
