@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
 import AuthContext from '../context/AuthContext';
+import LocationPicker from './LocationPicker';
 
 const Events = () => {
     const { user } = useContext(AuthContext);
@@ -12,6 +13,7 @@ const Events = () => {
     const [description, setDescription] = useState('');
     const [eventDate, setEventDate] = useState('');
     const [zoomLink, setZoomLink] = useState('');
+    const [locationData, setLocationData] = useState(null);
     const [showForm, setShowForm] = useState(false);
 
     const fetchEvents = async () => {
@@ -35,7 +37,7 @@ const Events = () => {
 
         try {
             await axios.post('http://localhost:5000/api/events', {
-                title, description, eventDate, zoomLink
+                title, description, eventDate, zoomLink, locationData
             }, {
                 headers: { Authorization: `Bearer ${user.token}` }
             });
@@ -44,6 +46,7 @@ const Events = () => {
             setDescription('');
             setEventDate('');
             setZoomLink('');
+            setLocationData(null);
             fetchEvents();
         } catch (err) {
             console.error(err);
@@ -101,6 +104,14 @@ const Events = () => {
                                 <label className="block text-sm font-medium text-slate-700 mb-1">رابط Zoom (اختياري)</label>
                                 <input type="text" value={zoomLink} onChange={e => setZoomLink(e.target.value)} className="w-full p-2 border rounded-lg" />
                             </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">موقع الفعالية (اختياري)</label>
+                            <LocationPicker
+                                value={locationData}
+                                onChange={setLocationData}
+                                placeholder="ابحث عن موقع الفعالية..."
+                            />
                         </div>
                         <button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg">نشر الفعالية</button>
                     </form>

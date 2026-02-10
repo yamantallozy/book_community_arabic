@@ -13,6 +13,10 @@ const BookList = () => {
     const [search, setSearch] = useState('');
     const [sort, setSort] = useState('newest');
     const [rating, setRating] = useState('');
+    const [category, setCategory] = useState('');
+    const [subgenre, setSubgenre] = useState('');
+    const [bookLength, setBookLength] = useState('');
+    const [originalLanguage, setOriginalLanguage] = useState('');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
     useEffect(() => {
@@ -23,6 +27,20 @@ const BookList = () => {
                 if (search) params.q = search;
                 if (sort) params.sort = sort;
                 if (rating) params.rating = rating;
+                if (category) params.category = category; // Pass Category Name or ID? Backend expects Name from previous check, but let's see. 
+                // In bookController.js: if (category) whereClauses.push(`c.Name = @category`); 
+                // So backend expects Category Name. But FilterBar usually works with IDs. 
+                // I should check what FilterBar will send.
+                // If I change FilterBar to send Name, it matches backend. 
+                // Or I update backend to accept ID. 
+                // Let's stick to Name for "Human Readable URLs" logic if we ever add routing, but ID is safer.
+                // Re-reading bookController.js: request.input('category', sql.NVarChar, category);
+                // It expects text. 
+                // So FilterBar should pass the Name.
+
+                if (subgenre) params.subgenre = subgenre;
+                if (bookLength) params.bookLength = bookLength;
+                if (originalLanguage) params.originalLanguage = originalLanguage;
 
                 const response = await axios.get('http://localhost:5000/api/books', { params });
                 setBooks(response.data);
@@ -35,14 +53,14 @@ const BookList = () => {
         };
 
         fetchBooks();
-    }, [search, sort, rating]);
+    }, [search, sort, rating, category, subgenre, bookLength, originalLanguage]);
 
     const handleSearch = (term) => {
         setSearch(term);
     };
 
-    if (loading) return <div>جارِ تحميل الكتب...</div>;
-    if (error) return <div>{error}</div>;
+    if (loading) return <div className="text-center py-20">جارِ تحميل الكتب...</div>;
+    if (error) return <div className="text-center py-20 text-red-500">{error}</div>;
 
     return (
         <div className="max-w-7xl mx-auto py-10 px-4">
@@ -69,8 +87,8 @@ const BookList = () => {
                     ></div>
 
                     {/* Drawer Content */}
-                    <div className="relative bg-white w-full max-w-sm rounded-t-2xl sm:rounded-2xl shadow-xl overflow-hidden animate-fade-in-down">
-                        <div className="flex justify-between items-center p-4 border-b border-slate-100 bg-slate-50">
+                    <div className="relative bg-white w-full max-w-sm rounded-t-2xl sm:rounded-2xl shadow-xl overflow-hidden animate-fade-in-down max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center p-4 border-b border-slate-100 bg-slate-50 sticky top-0 z-10">
                             <h3 className="font-bold text-lg text-slate-800">خيارات التصفية</h3>
                             <button onClick={() => setIsFilterOpen(false)} className="text-slate-400 hover:text-slate-600">
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -84,7 +102,15 @@ const BookList = () => {
                                 setSort={setSort}
                                 rating={rating}
                                 setRating={setRating}
-                                className="!p-0 !shadow-none !border-none" // Remove default card styles inside modal
+                                category={category}
+                                setCategory={setCategory}
+                                subgenre={subgenre}
+                                setSubgenre={setSubgenre}
+                                bookLength={bookLength}
+                                setBookLength={setBookLength}
+                                originalLanguage={originalLanguage}
+                                setOriginalLanguage={setOriginalLanguage}
+                                className="!p-0 !shadow-none !border-none"
                             />
                             <button
                                 onClick={() => setIsFilterOpen(false)}
@@ -99,9 +125,16 @@ const BookList = () => {
 
             <div className="flex flex-col md:flex-row gap-8 items-start">
 
-                {/* Desktop Sidebar (Hidden on Mobile) */}
-                <aside className="hidden md:block w-64 flex-shrink-0 sticky top-24">
-                    <FilterBar sort={sort} setSort={setSort} rating={rating} setRating={setRating} />
+                {/* Desktop Sidebar */}
+                <aside className="hidden md:block w-72 flex-shrink-0 sticky top-24">
+                    <FilterBar
+                        sort={sort} setSort={setSort}
+                        rating={rating} setRating={setRating}
+                        category={category} setCategory={setCategory}
+                        subgenre={subgenre} setSubgenre={setSubgenre}
+                        bookLength={bookLength} setBookLength={setBookLength}
+                        originalLanguage={originalLanguage} setOriginalLanguage={setOriginalLanguage}
+                    />
                 </aside>
 
                 {/* Main Content */}
@@ -114,7 +147,14 @@ const BookList = () => {
                     {/* Books Grid */}
                     {books.length === 0 ? (
                         <div className="text-center py-20 bg-white rounded-2xl shadow-sm border border-slate-100">
-                            <p className="text-slate-500 text-lg">لا توجد كتب تطابق بحثك.</p>
+                            <span className="text-6xl block mb-4">🔍</span>
+                            <p className="text-slate-500 text-lg font-medium">لا توجد كتب تطابق بحثك.</p>
+                            <button
+                                onClick={() => { setSearch(''); setCategory(''); setSubgenre(''); setRating(''); setBookLength(''); setOriginalLanguage(''); }}
+                                className="mt-4 text-primary font-bold hover:underline"
+                            >
+                                إعادة تعيين الفلاتر
+                            </button>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -133,11 +173,22 @@ const BookList = () => {
                                                     <span className="text-4xl px-4 text-center">📚</span>
                                                 </div>
                                             )}
-                                            <div className="absolute top-0 left-0 p-2 rtl:right-auto rtl:left-0 ltr:right-0">
-                                                <span className="bg-white/90 backdrop-blur-sm text-yellow-500 text-xs font-bold px-2 py-1 rounded-lg shadow-sm flex items-center gap-1">
+
+                                            {/* Rating Badge */}
+                                            <div className="absolute top-2 left-2 rtl:right-auto rtl:left-2 ltr:right-2">
+                                                <span className="bg-white/90 backdrop-blur-sm text-amber-500 text-xs font-bold px-2 py-1 rounded-lg shadow-sm flex items-center gap-1">
                                                     <span>★</span> {book.AverageRating ? book.AverageRating.toFixed(1) : '0.0'}
                                                 </span>
                                             </div>
+
+                                            {/* Category Badge overlay */}
+                                            {book.CategoryNameAr && (
+                                                <div className="absolute bottom-2 right-2 rtl:left-auto rtl:right-2">
+                                                    <span className="bg-black/40 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded-lg">
+                                                        {book.CategoryNameAr}
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="p-5 flex-1 flex flex-col">

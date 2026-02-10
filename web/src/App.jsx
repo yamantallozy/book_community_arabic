@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import BookList from './components/BookList';
@@ -11,6 +11,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import Footer from './components/Footer';
 import Events from './components/Events';
+import Blog from './components/Blog';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
                 </>
               } />
               <Route path="/events" element={<Events />} />
+              <Route path="/blog" element={<Blog />} />
               <Route path="/books/:id" element={<BookDetails />} />
               <Route path="/add-book" element={<AddBook />} />
               <Route path="/admin" element={<AdminDashboard />} />

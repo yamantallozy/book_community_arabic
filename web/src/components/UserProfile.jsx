@@ -3,6 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import AuthContext from '../context/AuthContext';
 import ShelfControl from './ShelfControl';
+import BookShelfCarousel from './BookShelfCarousel';
+import LocationPicker from './LocationPicker';
 
 const UserProfile = () => {
     const { id } = useParams();
@@ -19,6 +21,7 @@ const UserProfile = () => {
     const [editForm, setEditForm] = useState({
         bio: '',
         location: '',
+        locationData: null, // Structured location from LocationPicker
         favoriteGenres: [],
         socialLinks: {}
     });
@@ -34,10 +37,16 @@ const UserProfile = () => {
                 setStats(profileRes.data.stats || { followers: 0, following: 0 });
                 setIsFollowing(profileRes.data.isFollowing);
 
+                // Ensure favoriteGenres is an array
+                const safeGenres = Array.isArray(profileRes.data.favoriteGenres)
+                    ? profileRes.data.favoriteGenres
+                    : [];
+
                 setEditForm({
                     bio: profileRes.data.bio || '',
                     location: profileRes.data.location || '',
-                    favoriteGenres: profileRes.data.favoriteGenres || [],
+                    locationData: profileRes.data.locationData || null,
+                    favoriteGenres: safeGenres,
                     socialLinks: profileRes.data.socialLinks || {}
                 });
 
@@ -86,6 +95,12 @@ const UserProfile = () => {
             formData.append('location', editForm.location);
             formData.append('favoriteGenres', JSON.stringify(editForm.favoriteGenres));
             formData.append('socialLinks', JSON.stringify(editForm.socialLinks));
+
+            // Add structured location data if available
+            if (editForm.locationData) {
+                formData.append('locationData', JSON.stringify(editForm.locationData));
+            }
+
             if (avatarFile) {
                 formData.append('avatar', avatarFile);
             }
@@ -140,6 +155,16 @@ const UserProfile = () => {
                             <h1 className="text-2xl font-bold text-slate-900 mb-1">{profile.username}</h1>
                             {profile.location && <p className="text-slate-500 text-sm mb-4">📍 {profile.location}</p>}
 
+                            {/* Bio Section */}
+                            <div className="mb-6">
+                                <h3 className="text-xs uppercase font-bold text-slate-400 mb-2">نبذة عني</h3>
+                                {profile.bio ? (
+                                    <p className="text-slate-600 text-sm leading-relaxed">{profile.bio}</p>
+                                ) : (
+                                    <p className="text-slate-400 text-sm italic">لم يتم إضافة نبذة بعد</p>
+                                )}
+                            </div>
+
                             <div className="flex justify-center md:justify-start gap-6 text-sm text-slate-600 mb-6 font-medium">
                                 <div className="text-center md:text-right">
                                     <span className="block text-lg font-bold text-slate-900">{stats.followers}</span>
@@ -175,7 +200,7 @@ const UserProfile = () => {
                             <div className="border-t border-slate-200 mt-6 pt-6">
                                 <h3 className="text-xs uppercase font-bold text-slate-400 mb-2">أنواع الكتب المفضلة</h3>
                                 <div className="flex flex-wrap gap-2">
-                                    {profile.favoriteGenres?.length > 0 ? (
+                                    {Array.isArray(profile.favoriteGenres) && profile.favoriteGenres.length > 0 ? (
                                         profile.favoriteGenres.map((g, i) => (
                                             <span key={i} className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-md">{g}</span>
                                         ))
@@ -193,11 +218,14 @@ const UserProfile = () => {
                             </div>
                             <div>
                                 <label className="text-xs font-bold text-slate-500">الموقع</label>
-                                <input
-                                    className="w-full text-sm border p-2 rounded"
-                                    value={editForm.location}
-                                    onChange={e => setEditForm({ ...editForm, location: e.target.value })}
-                                    placeholder="القاهرة، مصر"
+                                <LocationPicker
+                                    value={editForm.locationData || editForm.location}
+                                    onChange={(loc) => setEditForm({
+                                        ...editForm,
+                                        locationData: loc,
+                                        location: loc?.fullLabelAr || ''
+                                    })}
+                                    placeholder="ابحث عن مدينتك..."
                                 />
                             </div>
                             <div>
@@ -229,46 +257,10 @@ const UserProfile = () => {
             {/* Right Column (Content) */}
             <div className="md:col-span-8 lg:col-span-9 space-y-8">
 
-                {/* Currently Reading */}
-                {currentlyReading.length > 0 && (
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
-                        <h2 className="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">يقرأ حالياً</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {currentlyReading.map(shelf => (
-                                <div key={shelf.BookID} className="flex gap-4 items-start">
-                                    <Link to={`/books/${shelf.BookID}`}>
-                                        <img src={shelf.CoverImageURL} alt={shelf.Title} className="w-20 h-28 object-cover rounded shadow-sm hover:opacity-90 transition-opacity" />
-                                    </Link>
-                                    <div>
-                                        <Link to={`/books/${shelf.BookID}`} className="font-bold text-slate-900 hover:text-primary block mb-1">
-                                            {shelf.Title}
-                                        </Link>
-                                        <p className="text-sm text-slate-500 mb-2">بقلم {shelf.Author}</p>
-                                        <div className="text-xs text-slate-400">بدأ القراءة منذ {new Date(shelf.UpdatedAt).toLocaleDateString()}</div>
-                                        {/* Optional: Add progress bar here if DB supported it */}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Read Books Grid (New Request) */}
-                {read.length > 0 && (
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
-                        <h2 className="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">كتب قرأتها ({read.length})</h2>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                            {read.slice(0, 10).map(shelf => ( // Show top 10
-                                <div key={shelf.BookID} className="group relative">
-                                    <Link to={`/books/${shelf.BookID}`}>
-                                        <img src={shelf.CoverImageURL} alt={shelf.Title} className="w-full h-40 object-cover rounded-lg shadow-sm group-hover:shadow-md transition-all" />
-                                        <div className="mt-2 text-xs font-bold text-slate-800 truncate">{shelf.Title}</div>
-                                    </Link>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
+                {/* Book Shelves with Carousel */}
+                <BookShelfCarousel title="أقرأ حالياً" books={currentlyReading} />
+                <BookShelfCarousel title="كتب قرأتها" books={read} />
+                <BookShelfCarousel title="أريد قراءتها" books={wantToRead} />
 
                 {/* Bookshelves Summary */}
                 <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">

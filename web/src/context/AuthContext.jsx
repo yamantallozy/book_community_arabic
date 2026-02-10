@@ -47,8 +47,30 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
     };
 
+    const isAdmin = () => {
+        return user?.role === 'admin' || user?.role === 'super_admin';
+    };
+
+    const isSuperAdmin = () => {
+        return user?.role === 'super_admin';
+    };
+
+    const isModerator = () => {
+        return isAdmin(); // For now, admins and super admins are moderators
+    };
+
     return (
-        <AuthContext.Provider value={{ user, token: user?.token, loading, login, register, logout }}>
+        <AuthContext.Provider value={{
+            user,
+            token: user?.token,
+            loading,
+            login,
+            register,
+            logout,
+            isAdmin,
+            isSuperAdmin,
+            isModerator
+        }}>
             {children}
         </AuthContext.Provider>
     );

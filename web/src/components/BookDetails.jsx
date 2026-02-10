@@ -545,6 +545,47 @@ const BookDetails = () => {
                                 </div>
                             )}
                         </div>
+
+                        {/* Metadata Sidebar */}
+                        <div className="mt-6 space-y-4 text-sm bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                            <div className="grid grid-cols-2 gap-4 border-b border-slate-100 pb-4">
+                                <div>
+                                    <span className="block text-slate-400 text-xs mb-1">الصفحات</span>
+                                    <span className="font-bold text-slate-700">{book.PageCount || '--'}</span>
+                                </div>
+                                <div>
+                                    <span className="block text-slate-400 text-xs mb-1">سنة النشر</span>
+                                    <span className="font-bold text-slate-700">{book.PublicationYear || '--'}</span>
+                                </div>
+                                {book.OriginalLanguage && (
+                                    <div className="col-span-2">
+                                        <span className="block text-slate-400 text-xs mb-1">اللغة الأصلية</span>
+                                        <span className="font-bold text-slate-700">{book.OriginalLanguage}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="space-y-3 pt-2">
+                                {book.Translator && (
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500">المترجم</span>
+                                        <span className="font-medium text-slate-800">{book.Translator}</span>
+                                    </div>
+                                )}
+                                {book.Publisher && (
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500">الناشر</span>
+                                        <span className="font-medium text-slate-800">{book.Publisher}</span>
+                                    </div>
+                                )}
+                                {book.ISBN && (
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500">ISBN</span>
+                                        <span className="font-mono text-xs text-slate-600 block pt-1">{book.ISBN}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
 
                     {/* RIGHT COLUMN (Info) */}
@@ -553,13 +594,23 @@ const BookDetails = () => {
                         {/* Title & Metadata */}
                         <div>
                             {/* Genre Chip */}
-                            <div className="flex gap-2 mb-3">
-                                <span className="px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-full border border-indigo-100">
-                                    رواية
-                                </span>
-                                <span className="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-full border border-slate-200">
-                                    320 صفحة
-                                </span>
+                            {/* Category & Genre Chips */}
+                            <div className="flex flex-wrap gap-2 mb-3">
+                                {book.CategoryNameAr && (
+                                    <span className="px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-full border border-indigo-100">
+                                        {book.CategoryNameAr}
+                                    </span>
+                                )}
+                                {book.Subgenres && book.Subgenres.length > 0 && book.Subgenres.map((sub, idx) => (
+                                    <span key={idx} className="px-3 py-1 bg-slate-50 text-slate-600 text-xs font-bold rounded-full border border-slate-200">
+                                        {sub}
+                                    </span>
+                                ))}
+                                {book.Tags && book.Tags.length > 0 && book.Tags.map((tag, idx) => (
+                                    <span key={idx} className="px-3 py-1 bg-amber-50 text-amber-700 text-xs font-bold rounded-full border border-amber-100">
+                                        #{tag}
+                                    </span>
+                                ))}
                             </div>
 
                             <h1 className="text-5xl font-extrabold text-slate-800 leading-tight mb-2 tracking-tight">{book.Title}</h1>

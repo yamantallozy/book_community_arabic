@@ -47,9 +47,9 @@ const registerUser = async (req, res) => {
             .input('email', sql.NVarChar, email)
             .input('password', sql.NVarChar, hashedPassword)
             .query(`
-                INSERT INTO Users (Username, Email, PasswordHash) 
+                INSERT INTO Users (Username, Email, PasswordHash, Role) 
                 OUTPUT inserted.UserID, inserted.Username, inserted.Email
-                VALUES (@username, @email, @password)
+                VALUES (@username, @email, @password, 'user')
             `);
 
         const user = result.recordset[0];
@@ -59,7 +59,8 @@ const registerUser = async (req, res) => {
             id: user.UserID,
             username: user.Username,
             email: user.Email,
-            isAdmin: !!user.IsAdmin,
+            role: 'user', // Default role for new users
+            isAdmin: false, // Legacy support
             token: generateToken(user.UserID),
         });
 
@@ -92,7 +93,9 @@ const loginUser = async (req, res) => {
                 id: user.UserID,
                 username: user.Username,
                 email: user.Email,
-                isAdmin: !!user.IsAdmin,
+                email: user.Email,
+                role: user.Role || 'user',
+                isAdmin: user.Role === 'admin' || user.Role === 'super_admin', // Helper
                 token: generateToken(user.UserID),
             });
         } else {
@@ -116,7 +119,7 @@ const getUserProfile = async (req, res) => {
 
         const result = await pool.request()
             .input('id', sql.Int, userId)
-            .query('SELECT UserID, Username, Email, Bio, Location, FavoriteGenres, SocialLinks, Avatar, CreatedAt, IsAdmin FROM Users WHERE UserID = @id');
+            .query('SELECT UserID, Username, Email, Bio, Location, LocationID, LocationProvider, CountryCode, CityNameEn, CityNameAr, LocationLat, LocationLng, FavoriteGenres, SocialLinks, Avatar, CreatedAt, IsAdmin FROM Users WHERE UserID = @id');
 
         if (result.recordset.length === 0) {
             return res.status(404).json({ msg: 'User not found' });
@@ -149,6 +152,21 @@ const getUserProfile = async (req, res) => {
             .query('SELECT AVG(CAST(Rating AS FLOAT)) as AvgRating FROM Reviews WHERE UserID = @id AND IsDeleted = 0');
         const averageRating = avgRatingResult.recordset[0].AvgRating || 0;
 
+        // Parse structured location
+        let locationData = null;
+        if (user.LocationID) {
+            locationData = {
+                locationId: user.LocationID,
+                provider: user.LocationProvider,
+                countryCode: user.CountryCode,
+                cityNameEn: user.CityNameEn,
+                cityNameAr: user.CityNameAr,
+                fullLabelAr: user.Location, // Using stored display name as fallback
+                lat: user.LocationLat,
+                lng: user.LocationLng
+            };
+        }
+
         // Don't send password hash
         res.json({
             id: user.UserID,
@@ -156,6 +174,7 @@ const getUserProfile = async (req, res) => {
             email: user.Email, // Maybe hide email if public? For now keep it.
             bio: user.Bio,
             location: user.Location,
+            locationData: locationData,
             favoriteGenres: user.FavoriteGenres ? JSON.parse(user.FavoriteGenres) : [],
             socialLinks: user.SocialLinks ? JSON.parse(user.SocialLinks) : {},
             avatar: user.Avatar,
@@ -181,34 +200,63 @@ const getUserProfile = async (req, res) => {
 const updateUserProfile = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { bio, location, favoriteGenres, socialLinks } = req.body;
+        const { bio, location, favoriteGenres, socialLinks, locationData } = req.body;
         let avatarPath = req.body.avatar;
 
         if (req.file) {
-            // If file uploaded, use the file path
-            // Assuming server runs on localhost:5000, we store relative path or full URL
-            // Storing relative path '/uploads/filename' is usually best
             avatarPath = `http://localhost:5000/uploads/${req.file.filename}`;
         }
 
         const pool = await sql.connect();
 
-        // If avatarPath is undefined/null (not sent), we shouldn't overwrite it with null if we want to keep existing.
-        // But usually frontend sends existing if not changed, or we can fetch first. 
-        // For simplicity, let's assume if it's not provided, we don't update it, OR we handle it in SQL.
-        // Let's do a dynamic update or just fetch current first.
+        // Parse structured location data if provided
+        let parsedLocationData = null;
+        if (locationData) {
+            try {
+                parsedLocationData = typeof locationData === 'string' ? JSON.parse(locationData) : locationData;
+            } catch (e) {
+                console.log('Failed to parse locationData:', e);
+            }
+        }
 
-        // Easier: Dynamic build query or just always update all fields (frontend must send all current values)
-        // Let's assume frontend sends all values.
-
-        await pool.request()
+        // Build the update query with location fields
+        const request = pool.request()
             .input('id', sql.Int, userId)
             .input('bio', sql.NVarChar, bio)
-            .input('location', sql.NVarChar, location)
+            .input('location', sql.NVarChar, parsedLocationData?.fullLabelAr || location || null)
             .input('favoriteGenres', sql.NVarChar, JSON.stringify(favoriteGenres || []))
             .input('socialLinks', sql.NVarChar, JSON.stringify(socialLinks || {}))
-            .input('avatar', sql.NVarChar, avatarPath)
-            .query(`
+            .input('avatar', sql.NVarChar, avatarPath);
+
+        // Add structured location fields if available
+        if (parsedLocationData) {
+            request
+                .input('locationId', sql.NVarChar, parsedLocationData.locationId || null)
+                .input('locationProvider', sql.NVarChar, parsedLocationData.provider || null)
+                .input('countryCode', sql.NVarChar, parsedLocationData.countryCode || null)
+                .input('cityNameEn', sql.NVarChar, parsedLocationData.cityNameEn || null)
+                .input('cityNameAr', sql.NVarChar, parsedLocationData.cityNameAr || null)
+                .input('locationLat', sql.Decimal(10, 7), parsedLocationData.lat || null)
+                .input('locationLng', sql.Decimal(10, 7), parsedLocationData.lng || null);
+
+            await request.query(`
+                UPDATE Users 
+                SET Bio = @bio, 
+                    Location = @location, 
+                    FavoriteGenres = @favoriteGenres, 
+                    SocialLinks = @socialLinks,
+                    Avatar = ISNULL(@avatar, Avatar),
+                    LocationID = @locationId,
+                    LocationProvider = @locationProvider,
+                    CountryCode = @countryCode,
+                    CityNameEn = @cityNameEn,
+                    CityNameAr = @cityNameAr,
+                    LocationLat = @locationLat,
+                    LocationLng = @locationLng
+                WHERE UserID = @id
+            `);
+        } else {
+            await request.query(`
                 UPDATE Users 
                 SET Bio = @bio, 
                     Location = @location, 
@@ -217,6 +265,7 @@ const updateUserProfile = async (req, res) => {
                     Avatar = ISNULL(@avatar, Avatar) 
                 WHERE UserID = @id
             `);
+        }
 
         res.json({ msg: 'Profile updated', avatar: avatarPath });
 

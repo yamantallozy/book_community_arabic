@@ -1,3 +1,7 @@
+import React, { useContext } from 'react';
+import { Link, NavLink } from 'react-router-dom';
+import AuthContext from '../context/AuthContext';
+
 const Navbar = () => {
     const { user, logout } = useContext(AuthContext);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
@@ -5,6 +9,18 @@ const Navbar = () => {
     const toggleMobileMenu = () => {
         setIsMobileMenuOpen(!isMobileMenuOpen);
     };
+
+    const navLinkClasses = ({ isActive }) =>
+        `px-3 py-2 rounded-lg transition-all duration-200 font-medium ${isActive
+            ? 'text-primary bg-indigo-50 font-bold shadow-sm ring-1 ring-indigo-100'
+            : 'text-slate-600 hover:text-primary hover:bg-slate-50'
+        }`;
+
+    const mobileNavLinkClasses = ({ isActive }) =>
+        `block px-3 py-2.5 rounded-lg text-base font-medium transition-colors border-b border-slate-50 ${isActive
+            ? 'text-primary bg-indigo-50 font-bold shadow-sm'
+            : 'text-slate-700 hover:text-primary hover:bg-slate-50'
+        }`;
 
     return (
         <nav className="bg-white shadow-sm sticky top-0 z-50">
@@ -31,22 +47,25 @@ const Navbar = () => {
                     </div>
 
                     {/* Desktop Menu */}
-                    <div className="hidden md:flex items-center gap-6">
-                        <Link to="/" className="text-slate-600 hover:text-primary font-medium transition-colors">الرئيسية</Link>
-                        <Link to="/events" className="text-slate-600 hover:text-primary font-medium transition-colors">فعاليات</Link>
-                        <Link to="/my-books" className="text-slate-600 hover:text-primary font-medium transition-colors">كتبي</Link>
+                    <div className="hidden md:flex items-center gap-4 lg:gap-6">
+                        <NavLink to="/" className={navLinkClasses}>الرئيسية</NavLink>
+                        <NavLink to="/events" className={navLinkClasses}>فعاليات</NavLink>
+                        <NavLink to="/blog" className={navLinkClasses}>مدونة</NavLink>
 
                         {user ? (
                             <div className="flex items-center gap-4">
                                 {user.isAdmin && (
-                                    <Link to="/admin" className="text-sm font-bold text-primary bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors">
+                                    <NavLink to="/admin" className={navLinkClasses}>
                                         لوحة التحكم
-                                    </Link>
+                                    </NavLink>
                                 )}
-                                <Link to={`/profile/${user.id}`} className="flex items-center gap-2 text-slate-700 hover:text-primary font-medium transition-colors">
+                                <NavLink to={`/profile/${user.id}`} className={({ isActive }) =>
+                                    `flex items-center gap-2 font-medium transition-colors ${isActive ? 'text-primary font-bold' : 'text-slate-700 hover:text-primary'
+                                    }`
+                                }>
                                     {user.avatar && <img src={user.avatar} alt="avatar" className="w-8 h-8 rounded-full object-cover border border-slate-200" />}
                                     <span>{user.username}</span>
-                                </Link>
+                                </NavLink>
                                 <button
                                     onClick={logout}
                                     className="bg-transparent border border-slate-300 text-slate-600 hover:bg-slate-50 hover:text-red-500 px-4 py-1.5 rounded-lg text-sm transition-all"
@@ -56,7 +75,7 @@ const Navbar = () => {
                             </div>
                         ) : (
                             <div className="flex items-center gap-3">
-                                <Link to="/login" className="text-slate-600 hover:text-primary font-medium transition-colors">دخول</Link>
+                                <NavLink to="/login" className={navLinkClasses}>دخول</NavLink>
                                 <Link to="/register" className="bg-primary hover:bg-indigo-700 text-white px-5 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all">حساب جديد</Link>
                             </div>
                         )}
@@ -101,26 +120,29 @@ const Navbar = () => {
                                 </div>
                             )}
 
-                            <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2.5 rounded-lg text-base font-medium text-slate-700 hover:text-primary hover:bg-slate-50 transition-colors border-b border-slate-50">
+                            <NavLink to="/" onClick={() => setIsMobileMenuOpen(false)} className={mobileNavLinkClasses}>
                                 الرئيسية
-                            </Link>
-                            <Link to="/events" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2.5 rounded-lg text-base font-medium text-slate-700 hover:text-primary hover:bg-slate-50 transition-colors border-b border-slate-50">
+                            </NavLink>
+                            <NavLink to="/events" onClick={() => setIsMobileMenuOpen(false)} className={mobileNavLinkClasses}>
                                 فعاليات
-                            </Link>
-                            <Link to="/my-books" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2.5 rounded-lg text-base font-medium text-slate-700 hover:text-primary hover:bg-slate-50 transition-colors border-b border-slate-50">
-                                كتبي
-                            </Link>
+                            </NavLink>
+                            <NavLink to="/blog" onClick={() => setIsMobileMenuOpen(false)} className={mobileNavLinkClasses}>
+                                مدونة
+                            </NavLink>
 
                             {user ? (
                                 <>
                                     {user.isAdmin && (
-                                        <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2.5 rounded-lg text-base font-medium text-primary bg-indigo-50 hover:bg-indigo-100 transition-colors">
+                                        <NavLink to="/admin" onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) =>
+                                            `block px-3 py-2.5 rounded-lg text-base font-medium transition-colors ${isActive ? 'bg-primary text-white' : 'text-primary bg-indigo-50 hover:bg-indigo-100'
+                                            }`
+                                        }>
                                             لوحة التحكم
-                                        </Link>
+                                        </NavLink>
                                     )}
-                                    <Link to={`/profile/${user.id}`} onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2.5 rounded-lg text-base font-medium text-slate-700 hover:text-primary hover:bg-slate-50 transition-colors">
+                                    <NavLink to={`/profile/${user.id}`} onClick={() => setIsMobileMenuOpen(false)} className={mobileNavLinkClasses}>
                                         الملف الشخصي
-                                    </Link>
+                                    </NavLink>
                                     <button
                                         onClick={() => {
                                             logout();
@@ -133,9 +155,12 @@ const Navbar = () => {
                                 </>
                             ) : (
                                 <div className="pt-4 mt-2 space-y-3">
-                                    <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="block w-full text-center px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors font-medium">
+                                    <NavLink to="/login" onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) =>
+                                        `block w-full text-center px-4 py-2 border border-slate-300 rounded-lg transition-colors font-medium ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-700 hover:bg-slate-50'
+                                        }`
+                                    }>
                                         دخول
-                                    </Link>
+                                    </NavLink>
                                     <Link to="/register" onClick={() => setIsMobileMenuOpen(false)} className="block w-full text-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm font-medium">
                                         حساب جديد
                                     </Link>

@@ -24,6 +24,7 @@ app.get('/', (req, res) => {
 // Routes
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/books', require('./routes/bookRoutes'));
+app.use('/api/meta', require('./routes/categoryRoutes'));
 app.use('/api/reviews', require('./routes/reviewRoutes'));
 app.use('/api/shelves', require('./routes/shelfRoutes'));
 app.use('/api/events', require('./routes/eventRoutes'));
