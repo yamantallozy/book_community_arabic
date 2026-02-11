@@ -103,31 +103,60 @@ const ShelfControl = ({ bookId }) => {
             </button>
 
             {isOpen && (
-                <div className="absolute ltr:left-0 rtl:right-0 mt-2 w-56 rounded-xl bg-white shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none z-50 overflow-hidden text-right border border-slate-100">
-                    <div className="py-1">
-                        {STATUS_OPTIONS.map((option) => (
-                            <button
-                                key={option.value}
-                                onClick={() => handleSelect(option.value)}
-                                className={`group flex w-full items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${status === option.value ? 'bg-indigo-50 text-indigo-700' : 'text-slate-700 hover:bg-slate-50'}`}
-                            >
-                                <span className="text-lg">{option.icon}</span>
-                                {option.label}
-                                {status === option.value && (
-                                    <span className="mr-auto text-indigo-600">✓</span>
-                                )}
-                            </button>
-                        ))}
-                        {status !== 'None' && (
-                            <button
-                                onClick={() => handleSelect('None')}
-                                className="w-full text-start px-4 py-3 text-sm text-red-500 hover:bg-red-50 border-t border-slate-50 transition-colors flex items-center gap-3 font-medium"
-                            >
-                                <span>🗑️</span> إزالة من المكتبة
-                            </button>
-                        )}
+                <>
+                    {/* Mobile Backdrop */}
+                    <div
+                        className="fixed inset-0 bg-black/20 z-40 md:hidden backdrop-blur-[1px]"
+                        onClick={() => setIsOpen(false)}
+                    />
+
+                    {/* Dropdown / Bottom Sheet */}
+                    <div className="
+                        fixed bottom-0 left-0 right-0 z-50 bg-white shadow-2xl rounded-t-3xl border-t border-slate-100 p-2 pb-safe animate-slide-up-mobile
+                        md:absolute md:top-full md:bottom-auto md:w-64 md:rounded-2xl md:shadow-xl md:border md:ltr:left-0 md:rtl:right-0 md:mt-3 md:animate-none
+                    ">
+
+                        {/* Mobile Handle */}
+                        <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-2 md:hidden" />
+
+                        <div className="flex flex-col md:block p-2 md:p-0">
+                            {STATUS_OPTIONS.map((option) => (
+                                <button
+                                    key={option.value}
+                                    onClick={() => handleSelect(option.value)}
+                                    className={`
+                                        group flex w-full items-center gap-4 px-4 py-3.5 mb-1 text-sm font-bold rounded-xl transition-all
+                                        ${status === option.value
+                                            ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
+                                            : 'text-slate-600 hover:bg-slate-50'
+                                        }
+                                    `}
+                                >
+                                    <span className="text-xl">{option.icon}</span>
+                                    <span>{option.label}</span>
+                                    {status === option.value && (
+                                        <div className="mr-auto bg-[var(--color-primary)] text-white rounded-full p-0.5">
+                                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
+                                        </div>
+                                    )}
+                                </button>
+                            ))}
+
+                            {status !== 'None' && (
+                                <>
+                                    <div className="h-px bg-slate-100 my-1"></div>
+                                    <button
+                                        onClick={() => handleSelect('None')}
+                                        className="w-full text-start px-4 py-3.5 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-colors flex items-center gap-4"
+                                    >
+                                        <span className="text-xl">🗑️</span>
+                                        <span>إزالة من المكتبة</span>
+                                    </button>
+                                </>
+                            )}
+                        </div>
                     </div>
-                </div>
+                </>
             )}
         </div>
     );

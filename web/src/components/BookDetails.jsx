@@ -669,11 +669,10 @@ const BookDetails = () => {
                             {/* Ratings Block */}
                             <div className="flex flex-col gap-1">
                                 <div className="flex items-center gap-2">
-                                    <div className="text-yellow-400 text-xl font-bold flex gap-1" dir="ltr">
-                                        {'★'.repeat(Math.round(avgRating))}
-                                        <span className="text-slate-200">{'★'.repeat(5 - Math.round(avgRating))}</span>
+                                    <div className="text-yellow-400 text-2xl font-bold flex items-center gap-2" dir="ltr">
+                                        <span>★</span>
+                                        <span className="text-slate-800">{avgRating.toFixed(1)}</span>
                                     </div>
-                                    <span className="text-slate-700 font-bold text-lg">{avgRating.toFixed(1)}</span>
                                     <span className="text-slate-400 text-xs font-medium">({reviewCount} مراجعة)</span>
                                 </div>
                                 <div className="text-xs text-slate-400 flex items-center gap-1">
